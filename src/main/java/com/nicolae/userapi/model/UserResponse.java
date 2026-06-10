@@ -1,15 +1,12 @@
 package com.nicolae.userapi.model;
 
-public class User {
+public class UserResponse {
 
     private String name;
     private int age;
     private double salary;
 
-    public User() {
-    }
-
-    public User(String name, int age, double salary) {
+    public UserResponse(String name, int age, double salary) {
         this.name = name;
         this.age = age;
         this.salary = salary;
@@ -25,12 +22,5 @@ public class User {
 
     public double getSalary() {
         return salary;
-    }
-
-    public void setSalary(double salary) {
-        this.salary = salary;
-    }
-    public void raiseSalary(double amount) {
-        this.salary += amount;
     }
 }
