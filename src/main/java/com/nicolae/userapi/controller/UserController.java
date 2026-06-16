@@ -20,7 +20,6 @@ import com.nicolae.userapi.validator.UserValidator;
 import com.nicolae.userapi.model.ErrorResponse;
 import com.nicolae.userapi.validator.ValidationResult;
 
-
 import java.util.List;
 
 @RestController
@@ -47,22 +46,18 @@ public class UserController {
     public ResponseEntity<UserResponse> getUserByName(@PathVariable String name) {
         User foundUser = userService.getUserByName(name);
 
-        if (foundUser == null) {
-            return ResponseEntity.notFound().build();
-        }
-
         UserResponse response = userMapper.toUserResponse(foundUser);
 
         return ResponseEntity.ok(response);
     }
+
     @PostMapping("/users")
     public ResponseEntity<?> addUser(@RequestBody CreateUserRequest request) {
 
         ValidationResult validationResult = userValidator.validateCreateUserRequest(request);
 
         if (!validationResult.isValid()) {
-            return ResponseEntity.badRequest()
-                    .body(new ErrorResponse(validationResult.getMessage()));
+            return createValidationErrorResponse(validationResult);
         }
 
         User user = userMapper.toUser(request);
@@ -81,15 +76,10 @@ public class UserController {
         ValidationResult validationResult = userValidator.validateUpdateSalaryRequest(request);
 
         if (!validationResult.isValid()) {
-            return ResponseEntity.badRequest()
-                    .body(new ErrorResponse(validationResult.getMessage()));
+            return createValidationErrorResponse(validationResult);
         }
 
         User updatedUser = userService.updateUserSalary(name, request.getSalary());
-
-        if (updatedUser == null) {
-            return ResponseEntity.notFound().build();
-        }
 
         UserResponse response = userMapper.toUserResponse(updatedUser);
 
@@ -97,11 +87,7 @@ public class UserController {
     }
     @DeleteMapping("/users/{name}")
     public ResponseEntity<Void> deleteUserByName(@PathVariable String name) {
-        boolean deleted = userService.deleteUserByName(name);
-
-        if (!deleted) {
-            return ResponseEntity.notFound().build();
-        }
+        userService.deleteUserByName(name);
 
         return ResponseEntity.noContent().build();
     }
@@ -114,18 +100,17 @@ public class UserController {
         ValidationResult validationResult = userValidator.validateRaiseSalaryRequest(request);
 
         if (!validationResult.isValid()){
-            return ResponseEntity.badRequest()
-                    .body(new ErrorResponse(validationResult.getMessage()));
+            return createValidationErrorResponse(validationResult);
         }
 
         User updatedUser = userService.raiseUserSalary(name, request.getAmount());
 
-        if (updatedUser == null) {
-            return ResponseEntity.notFound().build();
-        }
-
         UserResponse response = userMapper.toUserResponse(updatedUser);
 
         return ResponseEntity.ok(response);
+    }
+    private ResponseEntity<ErrorResponse> createValidationErrorResponse(ValidationResult validationResult) {
+        return ResponseEntity.badRequest()
+                .body(new ErrorResponse(validationResult.getMessage()));
     }
 }
