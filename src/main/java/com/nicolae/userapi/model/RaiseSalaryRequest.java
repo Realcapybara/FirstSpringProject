@@ -1,11 +1,11 @@
 package com.nicolae.userapi.model;
 
+import jakarta.validation.constraints.Positive;
+
 public class RaiseSalaryRequest {
 
+    @Positive(message = "Raise amount must be greater than 0")
     private double amount;
-
-    public RaiseSalaryRequest() {
-    }
 
     public double getAmount() {
         return amount;

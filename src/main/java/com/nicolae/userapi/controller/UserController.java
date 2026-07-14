@@ -3,22 +3,16 @@ package com.nicolae.userapi.controller;
 import com.nicolae.userapi.model.User;
 import com.nicolae.userapi.service.UserService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 import com.nicolae.userapi.model.UpdateSalaryRequest;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import com.nicolae.userapi.model.RaiseSalaryRequest;
-import org.springframework.web.bind.annotation.PatchMapping;
 import com.nicolae.userapi.model.CreateUserRequest;
 import com.nicolae.userapi.model.UserResponse;
 import com.nicolae.userapi.mapper.UserMapper;
-import com.nicolae.userapi.validator.UserValidator;
-import com.nicolae.userapi.model.ErrorResponse;
-import com.nicolae.userapi.validator.ValidationResult;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 
 import java.util.List;
 
@@ -27,24 +21,25 @@ public class UserController {
 
     private final UserService userService;
     private final UserMapper userMapper;
-    private final UserValidator userValidator;
-    public UserController(UserService userService, UserMapper userMapper, UserValidator userValidator) {
+    public UserController(UserService userService, UserMapper userMapper) {
         this.userService = userService;
         this.userMapper = userMapper;
-        this.userValidator = userValidator;
     }
 
     @GetMapping("/users")
-    public List<UserResponse> getUsers() {
-        return userService.getUsers()
+    public List<UserResponse> getUsers(
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) Double minimumSalary
+    ) {
+        return userService.getUsers(department, minimumSalary)
                 .stream()
                 .map(userMapper::toUserResponse)
                 .toList();
     }
 
-    @GetMapping("/users/{name}")
-    public ResponseEntity<UserResponse> getUserByName(@PathVariable String name) {
-        User foundUser = userService.getUserByName(name);
+    @GetMapping("/users/{id}")
+    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
+        User foundUser = userService.getUserById(id);
 
         UserResponse response = userMapper.toUserResponse(foundUser);
 
@@ -52,13 +47,7 @@ public class UserController {
     }
 
     @PostMapping("/users")
-    public ResponseEntity<?> addUser(@RequestBody CreateUserRequest request) {
-
-        ValidationResult validationResult = userValidator.validateCreateUserRequest(request);
-
-        if (!validationResult.isValid()) {
-            return createValidationErrorResponse(validationResult);
-        }
+    public ResponseEntity<?> addUser(@Valid @RequestBody CreateUserRequest request) {
 
         User user = userMapper.toUser(request);
 
@@ -68,49 +57,100 @@ public class UserController {
 
         return ResponseEntity.status(201).body(response);
     }
-    @PutMapping("/users/{name}/salary")
+    @PutMapping("/users/{id}/salary")
     public ResponseEntity<?> updateUserSalary(
-            @PathVariable String name,
-            @RequestBody UpdateSalaryRequest request
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateSalaryRequest request
     ) {
-        ValidationResult validationResult = userValidator.validateUpdateSalaryRequest(request);
 
-        if (!validationResult.isValid()) {
-            return createValidationErrorResponse(validationResult);
-        }
-
-        User updatedUser = userService.updateUserSalary(name, request.getSalary());
+        User updatedUser = userService.updateUserSalary(id, request.getSalary());
 
         UserResponse response = userMapper.toUserResponse(updatedUser);
 
         return ResponseEntity.ok(response);
     }
-    @DeleteMapping("/users/{name}")
-    public ResponseEntity<Void> deleteUserByName(@PathVariable String name) {
-        userService.deleteUserByName(name);
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<Void> deleteUserById(@PathVariable Long id) {
+        userService.deleteUserById(id);
 
         return ResponseEntity.noContent().build();
     }
-    @PatchMapping("/users/{name}/salary/raise")
+    @PatchMapping("/users/{id}/salary/raise")
     public ResponseEntity<?> raiseUserSalary(
-            @PathVariable String name,
-            @RequestBody RaiseSalaryRequest request
+            @PathVariable Long id,
+            @Valid @RequestBody RaiseSalaryRequest request
     ) {
 
-        ValidationResult validationResult = userValidator.validateRaiseSalaryRequest(request);
-
-        if (!validationResult.isValid()){
-            return createValidationErrorResponse(validationResult);
-        }
-
-        User updatedUser = userService.raiseUserSalary(name, request.getAmount());
+        User updatedUser = userService.raiseUserSalary(id, request.getAmount());
 
         UserResponse response = userMapper.toUserResponse(updatedUser);
 
         return ResponseEntity.ok(response);
     }
-    private ResponseEntity<ErrorResponse> createValidationErrorResponse(ValidationResult validationResult) {
-        return ResponseEntity.badRequest()
-                .body(new ErrorResponse(validationResult.getMessage()));
+
+    @GetMapping("/users/search/salary")
+    public ResponseEntity<List<UserResponse>> getUsersWithSalaryAtLeast(@RequestParam double minimum) {
+        List<User> users = userService.getUsersWithSalaryAtLeast(minimum);
+
+        List<UserResponse> response = users.stream()
+                .map(userMapper::toUserResponse)
+                .toList();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/users/search/age")
+    public ResponseEntity<List<UserResponse>> getUsersWithAgeAtLeast(@RequestParam int minimumAge) {
+        List<User> users = userService.getUsersWithAgeAtLeast(minimumAge);
+
+        List<UserResponse> response = users.stream()
+                .map(userMapper::toUserResponse)
+                .toList();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/users/sorted/salary")
+    public ResponseEntity<List<UserResponse>> getUsersSortedBySalaryDesc() {
+        List<User> users = userService.getUsersSortedBySalaryDesc();
+
+        List<UserResponse> response = users.stream()
+                .map(userMapper::toUserResponse)
+                .toList();
+
+        return ResponseEntity.ok(response);
+    }
+    @GetMapping("/users/paged")
+    public ResponseEntity<Page<UserResponse>> getUsersPage(Pageable pageable) {
+        Page<User> usersPage = userService.getUsersPage(pageable);
+
+        Page<UserResponse> response = usersPage.map(userMapper::toUserResponse);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/users/search/department")
+    public ResponseEntity<List<UserResponse>> getUsersByDepartment(@RequestParam String department) {
+        List<User> users = userService.getUsersByDepartment(department);
+
+        List<UserResponse> response = users.stream()
+                .map(userMapper::toUserResponse)
+                .toList();
+
+        return ResponseEntity.ok(response);
+    }
+    @GetMapping("/users/search/department-and-salary")
+    public ResponseEntity<List<UserResponse>>getUsersByDepartmentAndMinimumSalary(
+            @RequestParam String department,
+            @RequestParam double minimumSalary
+    ){
+        List<User> users = userService.getUsersByDepartmentAndMinimumSalary(department, minimumSalary);
+
+        List<UserResponse> response = users.stream()
+                .map(userMapper::toUserResponse)
+                .toList();
+
+        return ResponseEntity.ok(response);
     }
 }

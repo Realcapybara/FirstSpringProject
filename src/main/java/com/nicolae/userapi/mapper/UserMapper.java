@@ -12,15 +12,18 @@ public class UserMapper {
         return new User(
                 request.getName(),
                 request.getAge(),
-                request.getSalary()
+                request.getSalary(),
+                request.getDepartment()
         );
     }
 
     public UserResponse toUserResponse(User user) {
         return new UserResponse(
+                user.getId(),
                 user.getName(),
                 user.getAge(),
-                user.getSalary()
+                user.getSalary(),
+                user.getDepartment()
         );
     }
 }

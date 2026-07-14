@@ -1,69 +1,108 @@
 package com.nicolae.userapi.service;
 
-import com.nicolae.userapi.model.User;
-import com.nicolae.userapi.repository.UserRepository;
-import org.springframework.stereotype.Service;
-import com.nicolae.userapi.exception.UserNotFoundException;
 import com.nicolae.userapi.exception.UserAlreadyExistsException;
+import com.nicolae.userapi.exception.UserNotFoundException;
+import com.nicolae.userapi.model.User;
+import com.nicolae.userapi.repository.JpaUserRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 
 import java.util.List;
 
 @Service
 public class UserService {
 
-    private final UserRepository userRepository;
+    private final JpaUserRepository jpaUserRepository;
 
-    public UserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public UserService(JpaUserRepository jpaUserRepository) {
+        this.jpaUserRepository = jpaUserRepository;
     }
 
     public List<User> getUsers() {
-        return userRepository.findAll();
+        return jpaUserRepository.findAll();
     }
 
-    public User getUserByName(String name) {
-        return findUserOrThrow(name);
+    public User getUserById(Long id) {
+        return findUserByIdOrThrow(id);
     }
 
     public User addUser(User user) {
-        User existingUser = userRepository.findByName(user.getName());
-
-        if (existingUser != null) {
+        if (jpaUserRepository.findByNameIgnoreCase(user.getName()).isPresent()) {
             throw new UserAlreadyExistsException(user.getName());
         }
 
-        return userRepository.save(user);
+        return jpaUserRepository.save(user);
     }
 
-    public User updateUserSalary(String name, double newSalary) {
-        User user = findUserOrThrow(name);
+    public User updateUserSalary(Long id, double newSalary) {
+        User user = findUserByIdOrThrow(id);
 
         user.setSalary(newSalary);
-        return user;
+
+        return jpaUserRepository.save(user);
     }
 
-    public void deleteUserByName(String name) {
-        boolean deleted = userRepository.deleteByName(name);
+    public void deleteUserById(Long id) {
+        User user = findUserByIdOrThrow(id);
 
-        if (!deleted) {
-            throw new UserNotFoundException(name);
-        }
+        jpaUserRepository.delete(user);
     }
 
-    public User raiseUserSalary(String name, double amount) {
-        User user = findUserOrThrow(name);
+    public User raiseUserSalary(Long id, double amount) {
+        User user = findUserByIdOrThrow(id);
 
         user.raiseSalary(amount);
-        return user;
+
+        return jpaUserRepository.save(user);
     }
 
-    private User findUserOrThrow(String name) {
-        User user = userRepository.findByName(name);
+    public List<User> getUsersWithSalaryAtLeast(double minimumSalary) {
+        return jpaUserRepository.findBySalaryGreaterThanEqual(minimumSalary);
+    }
 
-        if (user == null) {
-            throw new UserNotFoundException(name);
+    private User findUserByIdOrThrow(Long id) {
+        return jpaUserRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
+    }
+
+    public List<User> getUsersWithAgeAtLeast(int minimumAge) {
+        return jpaUserRepository.findByAgeGreaterThanEqual(minimumAge);
+    }
+
+    public List<User> getUsersSortedBySalaryDesc() {
+        return jpaUserRepository.findAllByOrderBySalaryDesc();
+    }
+    public Page<User> getUsersPage(Pageable pageable) {
+        return jpaUserRepository.findAll(pageable);
+    }
+    public List<User> getUsersByDepartment(String department) {
+        return jpaUserRepository.findByDepartmentIgnoreCase(department);
+    }
+    public List<User> getUsersByDepartmentAndMinimumSalary(String department, double minimumSalary) {
+        return jpaUserRepository.findByDepartmentIgnoreCaseAndSalaryGreaterThanEqual(department, minimumSalary);
+    }
+    public List<User> getUsers(String department, Double minimumSalary) {
+        boolean hasDepartment = department != null && !department.isBlank();
+        boolean hasMinimumSalary = minimumSalary != null;
+
+        if (hasDepartment && hasMinimumSalary) {
+            return jpaUserRepository
+                    .findByDepartmentIgnoreCaseAndSalaryGreaterThanEqual(
+                            department,
+                            minimumSalary
+                    );
         }
 
-        return user;
+        if (hasDepartment) {
+            return jpaUserRepository.findByDepartmentIgnoreCase(department);
+        }
+
+        if (hasMinimumSalary) {
+            return jpaUserRepository.findBySalaryGreaterThanEqual(minimumSalary);
+        }
+
+        return jpaUserRepository.findAll();
     }
 }
