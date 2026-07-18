@@ -4,6 +4,7 @@ import com.nicolae.userapi.model.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 import java.util.Optional;
@@ -11,6 +12,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
+@ActiveProfiles("test")
 class JpaUserRepositoryTest {
 
     @Autowired
@@ -97,14 +99,14 @@ class JpaUserRepositoryTest {
         assertEquals("Alex", result.get(2).getName());
     }
     @Test
-    void findByDepartmentIgnoreCaseAndSalaryGreaterThanEqual_shouldReturnMatchingUsers() {
+    void findByDepartmentAndMinimumSalary_shouldReturnMatchingUsers() {
         jpaUserRepository.save(new User("Nicu", 30, 5000, "IT"));
         jpaUserRepository.save(new User("Maria", 28, 7000, "IT"));
         jpaUserRepository.save(new User("Alex", 22, 8000, "HR"));
         jpaUserRepository.save(new User("George", 35, 4000, "IT"));
 
         List<User> result = jpaUserRepository
-                .findByDepartmentIgnoreCaseAndSalaryGreaterThanEqual("it", 5000);
+                .findByDepartmentAndMinimumSalary("it", 5000);
 
         assertEquals(2, result.size());
 

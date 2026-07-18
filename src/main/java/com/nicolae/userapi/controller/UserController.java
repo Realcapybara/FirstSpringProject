@@ -1,5 +1,6 @@
 package com.nicolae.userapi.controller;
 
+import com.nicolae.userapi.model.UpdateUserRequest;
 import com.nicolae.userapi.model.User;
 import com.nicolae.userapi.service.UserService;
 import org.springframework.http.ResponseEntity;
@@ -57,6 +58,21 @@ public class UserController {
 
         return ResponseEntity.status(201).body(response);
     }
+
+    @PutMapping("/users/{id}")
+    public ResponseEntity<UserResponse> updateUser(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateUserRequest request
+    ) {
+        User updatedData = userMapper.toUser(request);
+
+        User updatedUser = userService.updateUser(id, updatedData);
+
+        UserResponse response = userMapper.toUserResponse(updatedUser);
+
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/users/{id}/salary")
     public ResponseEntity<?> updateUserSalary(
             @PathVariable Long id,

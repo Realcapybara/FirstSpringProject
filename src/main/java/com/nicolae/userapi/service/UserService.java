@@ -1,5 +1,6 @@
 package com.nicolae.userapi.service;
 
+import org.springframework.transaction.annotation.Transactional;
 import com.nicolae.userapi.exception.UserAlreadyExistsException;
 import com.nicolae.userapi.exception.UserNotFoundException;
 import com.nicolae.userapi.model.User;
@@ -28,6 +29,7 @@ public class UserService {
         return findUserByIdOrThrow(id);
     }
 
+    @Transactional
     public User addUser(User user) {
         if (jpaUserRepository.findByNameIgnoreCase(user.getName()).isPresent()) {
             throw new UserAlreadyExistsException(user.getName());
@@ -36,26 +38,29 @@ public class UserService {
         return jpaUserRepository.save(user);
     }
 
+    @Transactional
     public User updateUserSalary(Long id, double newSalary) {
         User user = findUserByIdOrThrow(id);
 
         user.setSalary(newSalary);
 
-        return jpaUserRepository.save(user);
+        return user;
     }
 
+    @Transactional
     public void deleteUserById(Long id) {
         User user = findUserByIdOrThrow(id);
 
         jpaUserRepository.delete(user);
     }
 
+    @Transactional
     public User raiseUserSalary(Long id, double amount) {
         User user = findUserByIdOrThrow(id);
 
         user.raiseSalary(amount);
 
-        return jpaUserRepository.save(user);
+        return user;
     }
 
     public List<User> getUsersWithSalaryAtLeast(double minimumSalary) {
@@ -77,19 +82,22 @@ public class UserService {
     public Page<User> getUsersPage(Pageable pageable) {
         return jpaUserRepository.findAll(pageable);
     }
+
     public List<User> getUsersByDepartment(String department) {
         return jpaUserRepository.findByDepartmentIgnoreCase(department);
     }
+
     public List<User> getUsersByDepartmentAndMinimumSalary(String department, double minimumSalary) {
-        return jpaUserRepository.findByDepartmentIgnoreCaseAndSalaryGreaterThanEqual(department, minimumSalary);
+        return jpaUserRepository.findByDepartmentAndMinimumSalary(department, minimumSalary);
     }
+
     public List<User> getUsers(String department, Double minimumSalary) {
         boolean hasDepartment = department != null && !department.isBlank();
         boolean hasMinimumSalary = minimumSalary != null;
 
         if (hasDepartment && hasMinimumSalary) {
             return jpaUserRepository
-                    .findByDepartmentIgnoreCaseAndSalaryGreaterThanEqual(
+                    .findByDepartmentAndMinimumSalary(
                             department,
                             minimumSalary
                     );
@@ -104,5 +112,23 @@ public class UserService {
         }
 
         return jpaUserRepository.findAll();
+    }
+
+    @Transactional
+    public User updateUser(Long id, User updatedUser) {
+        User existingUser = findUserByIdOrThrow(id);
+
+        jpaUserRepository.findByNameIgnoreCase(updatedUser.getName())
+                .filter(user -> !user.getId().equals(id))
+                .ifPresent(user -> {
+                    throw new UserAlreadyExistsException(updatedUser.getName());
+                });
+
+        existingUser.setName(updatedUser.getName());
+        existingUser.setAge(updatedUser.getAge());
+        existingUser.setSalary(updatedUser.getSalary());
+        existingUser.setDepartment(updatedUser.getDepartment());
+
+        return existingUser;
     }
 }

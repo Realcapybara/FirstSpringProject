@@ -2,6 +2,9 @@ package com.nicolae.userapi.repository;
 
 import com.nicolae.userapi.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +21,15 @@ public interface JpaUserRepository extends JpaRepository<User, Long> {
 
     List<User> findByDepartmentIgnoreCase(String department);
 
-    List<User> findByDepartmentIgnoreCaseAndSalaryGreaterThanEqual(String department, double salary);
+    @Query("""
+        select user
+        from User user
+        where lower(user.department) = lower(:department)
+          and user.salary >= :minimumSalary
+        """)
+    List<User> findByDepartmentAndMinimumSalary(
+            @Param("department") String department,
+            @Param("minimumSalary") double minimumSalary
+    );
 }
 

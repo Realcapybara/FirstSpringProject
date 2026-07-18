@@ -97,15 +97,11 @@ class UserServiceTest {
         when(jpaUserRepository.findById(1L))
                 .thenReturn(Optional.of(user));
 
-        when(jpaUserRepository.save(user))
-                .thenReturn(user);
-
         User result = userService.updateUserSalary(1L, 7000);
 
         assertEquals(7000, result.getSalary());
 
         verify(jpaUserRepository).findById(1L);
-        verify(jpaUserRepository).save(user);
     }
     @Test
     void raiseUserSalary_shouldIncreaseSalary_whenUserExists() {
@@ -115,15 +111,11 @@ class UserServiceTest {
         when(jpaUserRepository.findById(1L))
                 .thenReturn(Optional.of(user));
 
-        when(jpaUserRepository.save(user))
-                .thenReturn(user);
-
         User result = userService.raiseUserSalary(1L, 500);
 
         assertEquals(5500, result.getSalary());
 
         verify(jpaUserRepository).findById(1L);
-        verify(jpaUserRepository).save(user);
     }
     @Test
     void deleteUserById_shouldDeleteUser_whenUserExists() {
@@ -159,25 +151,25 @@ class UserServiceTest {
         User nicu = new User("Nicu", 30, 5000, "IT");
         User maria = new User("Maria", 28, 7000, "IT");
 
-        when(jpaUserRepository.findByDepartmentIgnoreCaseAndSalaryGreaterThanEqual("IT", 5000))
+        when(jpaUserRepository.findByDepartmentAndMinimumSalary("IT", 5000))
                 .thenReturn(List.of(nicu, maria));
 
-        List<User> result = userService.getUsersByDepartmentAndMinimumSalary("IT", 5000);
+        List<User> result =
+                userService.getUsersByDepartmentAndMinimumSalary("IT", 5000);
 
         assertEquals(2, result.size());
         assertEquals("Nicu", result.get(0).getName());
         assertEquals("Maria", result.get(1).getName());
 
         verify(jpaUserRepository)
-                .findByDepartmentIgnoreCaseAndSalaryGreaterThanEqual("IT", 5000);
+                .findByDepartmentAndMinimumSalary("IT", 5000);
     }
     @Test
     void getUsers_shouldUseCombinedQuery_whenBothFiltersExist() {
         User nicu = new User("Nicu", 30, 5000, "IT");
         User maria = new User("Maria", 28, 7000, "IT");
 
-        when(jpaUserRepository
-                .findByDepartmentIgnoreCaseAndSalaryGreaterThanEqual("IT", 5000))
+        when(jpaUserRepository.findByDepartmentAndMinimumSalary("IT", 5000))
                 .thenReturn(List.of(nicu, maria));
 
         List<User> result = userService.getUsers("IT", 5000.0);
@@ -185,6 +177,53 @@ class UserServiceTest {
         assertEquals(2, result.size());
 
         verify(jpaUserRepository)
-                .findByDepartmentIgnoreCaseAndSalaryGreaterThanEqual("IT", 5000);
+                .findByDepartmentAndMinimumSalary("IT", 5000);
+    }
+    @Test
+    void updateUser_shouldUpdateAllFields_whenUserExists() {
+        User existingUser = new User("Nicu", 30, 5000, "IT");
+        existingUser.setId(1L);
+
+        User updatedData = new User("Nicolae", 31, 6500, "Backend");
+
+        when(jpaUserRepository.findById(1L))
+                .thenReturn(Optional.of(existingUser));
+
+        when(jpaUserRepository.findByNameIgnoreCase("Nicolae"))
+                .thenReturn(Optional.empty());
+
+        User result = userService.updateUser(1L, updatedData);
+
+        assertEquals(1L, result.getId());
+        assertEquals("Nicolae", result.getName());
+        assertEquals(31, result.getAge());
+        assertEquals(6500, result.getSalary());
+        assertEquals("Backend", result.getDepartment());
+
+        verify(jpaUserRepository).findById(1L);
+        verify(jpaUserRepository).findByNameIgnoreCase("Nicolae");
+    }
+    @Test
+    void updateUser_shouldThrowException_whenNameBelongsToAnotherUser() {
+        User existingUser = new User("Nicu", 30, 5000, "IT");
+        existingUser.setId(1L);
+
+        User otherUser = new User("Maria", 28, 7000, "IT");
+        otherUser.setId(2L);
+
+        User updatedData = new User("Maria", 31, 6500, "Backend");
+
+        when(jpaUserRepository.findById(1L))
+                .thenReturn(Optional.of(existingUser));
+
+        when(jpaUserRepository.findByNameIgnoreCase("Maria"))
+                .thenReturn(Optional.of(otherUser));
+
+        assertThrows(
+                UserAlreadyExistsException.class,
+                () -> userService.updateUser(1L, updatedData)
+        );
+
+        verify(jpaUserRepository, never()).save(any(User.class));
     }
 }

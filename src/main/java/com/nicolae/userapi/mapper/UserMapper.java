@@ -1,5 +1,6 @@
 package com.nicolae.userapi.mapper;
 
+import com.nicolae.userapi.model.UpdateUserRequest;
 import com.nicolae.userapi.model.CreateUserRequest;
 import com.nicolae.userapi.model.User;
 import com.nicolae.userapi.model.UserResponse;
@@ -24,6 +25,14 @@ public class UserMapper {
                 user.getAge(),
                 user.getSalary(),
                 user.getDepartment()
+        );
+    }
+    public User toUser(UpdateUserRequest request) {
+        return new User(
+                request.getName(),
+                request.getAge(),
+                request.getSalary(),
+                request.getDepartment()
         );
     }
 }

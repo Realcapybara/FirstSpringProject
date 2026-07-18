@@ -1,5 +1,5 @@
 package com.nicolae.userapi.model;
-
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,9 +14,14 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String name;
+
     private int age;
+
     private double salary;
+
+    @Column(nullable = false)
     private String department;
 
     protected User() {
